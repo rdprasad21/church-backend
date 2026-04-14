@@ -6,31 +6,50 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ TEMP STORAGE
+// ======================
+// TEMP STORAGE (NO DB)
+// ======================
 let users = [];
 let events = [];
 
-// ✅ ROOT
+// ======================
+// ROOT
+// ======================
 app.get('/', (req, res) => {
   res.send('Church Backend API is running 🚀');
 });
 
-// ✅ GET ALL EVENTS (PUBLIC)
+// ======================
+// GET EVENTS (PUBLIC)
+// ======================
 app.get('/events', (req, res) => {
   res.json(events);
 });
 
-// ✅ REGISTER (WITH CHURCH + HALL)
+// ======================
+// REGISTER
+// ======================
 app.post('/register', (req, res) => {
-  const { name, email, password, churchName, hall } = req.body;
+  let { name, email, password, churchName, hall } = req.body;
+
+  name = name?.trim();
+  email = email?.trim();
+  password = password?.trim();
+  churchName = churchName?.trim();
+  hall = hall?.trim();
 
   if (!name || !email || !password || !churchName || !hall) {
-    return res.status(400).json({ message: 'All fields required' });
+    return res.status(400).json({
+      message: 'All fields are required'
+    });
   }
 
   const exists = users.find(u => u.email === email);
+
   if (exists) {
-    return res.status(400).json({ message: 'User already exists' });
+    return res.status(400).json({
+      message: 'User already exists'
+    });
   }
 
   const newUser = {
@@ -50,16 +69,23 @@ app.post('/register', (req, res) => {
   });
 });
 
-// ✅ LOGIN
+// ======================
+// LOGIN
+// ======================
 app.post('/login', (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+
+  email = email?.trim();
+  password = password?.trim();
 
   const user = users.find(
     u => u.email === email && u.password === password
   );
 
   if (!user) {
-    return res.status(401).json({ message: 'Invalid credentials' });
+    return res.status(401).json({
+      message: 'Invalid credentials'
+    });
   }
 
   res.json({
@@ -68,24 +94,29 @@ app.post('/login', (req, res) => {
   });
 });
 
-// ✅ CREATE EVENT WITH CLASH DETECTION
+// ======================
+// CREATE EVENT (CLASH SAFE)
+// ======================
 app.post('/events', (req, res) => {
-  const { title, date, time, venue, churchName } = req.body;
+  let { title, date, time, venue, churchName } = req.body;
+
+  title = title?.trim();
+  date = date?.trim();
+  time = time?.trim();
+  venue = venue?.trim() || 'Main Hall';
+  churchName = churchName?.trim();
 
   if (!title || !date || !time || !churchName) {
-    return res.status(400).json({ message: 'Missing fields' });
+    return res.status(400).json({
+      message: 'All fields are required (title, date, time, churchName)'
+    });
   }
 
   const eventStart = new Date(`${date}T${time}`);
-  const eventEnd = new Date(eventStart.getTime() + 60 * 60 * 1000); // 1 hour duration
+  const eventEnd = new Date(eventStart.getTime() + 60 * 60 * 1000);
 
-  // 🔥 CLASH DETECTION
   const clash = events.find(ev => {
-    if (
-      ev.churchName === churchName &&
-      ev.venue === (venue || 'Main Hall') &&
-      ev.date === date
-    ) {
+    if (ev.venue === venue && ev.date === date) {
       const evStart = new Date(`${ev.date}T${ev.time}`);
       const evEnd = new Date(evStart.getTime() + 60 * 60 * 1000);
 
@@ -105,7 +136,7 @@ app.post('/events', (req, res) => {
     title,
     date,
     time,
-    venue: venue || 'Main Hall',
+    venue,
     churchName
   };
 
@@ -117,7 +148,9 @@ app.post('/events', (req, res) => {
   });
 });
 
-// ✅ FILTER EVENTS BY CHURCH (OPTIONAL)
+// ======================
+// EVENTS BY CHURCH
+// ======================
 app.get('/events/church/:name', (req, res) => {
   const church = req.params.name;
 
@@ -128,7 +161,9 @@ app.get('/events/church/:name', (req, res) => {
   res.json(filtered);
 });
 
-// ✅ START SERVER
+// ======================
+// START SERVER
+// ======================
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
